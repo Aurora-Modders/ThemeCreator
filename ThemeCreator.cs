@@ -14,8 +14,8 @@ namespace ThemeCreator
     /// </summary>
     public class ColorChange
     {
-        public Color BackgroundColor { get; set; }
-        public Color ForegroundColor { get; set; }
+        public Color? BackgroundColor { get; set; }
+        public Color? ForegroundColor { get; set; }
     }
 
     /// <summary>
@@ -104,24 +104,24 @@ namespace ThemeCreator
             Type type = control.GetType();
             if (TypeColorChanges.ContainsKey(type))
             {
-                var ColorChange = TypeColorChanges[type];
-                control.BackColor = ColorChange.BackgroundColor;
-                control.ForeColor = ColorChange.ForegroundColor;
+                var colorChange = TypeColorChanges[type];
+                if (colorChange.BackgroundColor.HasValue) control.BackColor = colorChange.BackgroundColor.Value;
+                if (colorChange.ForegroundColor.HasValue) control.ForeColor = colorChange.ForegroundColor.Value;
             }
             // Named color changes.
             if (NameColorChanges.ContainsKey(control.Name))
             {
-                var ColorChange = NameColorChanges[control.Name];
-                control.BackColor = ColorChange.BackgroundColor;
-                control.ForeColor = ColorChange.ForegroundColor;
+                var colorChange = NameColorChanges[control.Name];
+                if (colorChange.BackgroundColor.HasValue) control.BackColor = colorChange.BackgroundColor.Value;
+                if (colorChange.ForegroundColor.HasValue) control.ForeColor = colorChange.ForegroundColor.Value;
             }
             // Regex named colors changes.
             foreach (KeyValuePair<Regex, ColorChange> regexColor in RegexNameColorChanges)
             {
                 if (regexColor.Key.IsMatch(control.Name))
                 {
-                    control.BackColor = regexColor.Value.BackgroundColor;
-                    control.ForeColor = regexColor.Value.ForegroundColor;
+                    if (regexColor.Value.BackgroundColor.HasValue) control.BackColor = regexColor.Value.BackgroundColor.Value;
+                    if (regexColor.Value.ForegroundColor.HasValue) control.ForeColor = regexColor.Value.ForegroundColor.Value;
                 }
             }
         }
