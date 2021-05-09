@@ -13,7 +13,7 @@ A method used to apply color swaps globally across Aurora.
 Typical use-case would be swapping out the dreaded blue background color throughout the game.
 
 ```c#
-ThemeCreator.AddGlobalColorSwap(Color.FromArgb(0, 0, 64), Color.Black); // Blue -> Black.
+ThemeCreator.ThemeCreator.AddGlobalColorSwap(Color.FromArgb(0, 0, 64), Color.Black); // Blue -> Black.
 ```
 
 ### public static void AddColorChangeByType(Type type, ColorChange colorChange)
@@ -23,8 +23,8 @@ Useful to modify all Form/ListView/Button/etc colors.
 
 ```c#
 // All buttons now have a black background and white text.
-var colorChange = new ColorChange { BackgroundColor = Color.Black, ForegroundColor = Color.White };
-ThemeCreator.AddColorChangeByType(typeof(Button), colorChange);
+var colorChange = new ThemeCreator.ColorChange { BackgroundColor = Color.Black, ForegroundColor = Color.White };
+ThemeCreator.ThemeCreator.AddColorChangeByType(typeof(Button), colorChange);
 ```
 
 ### public static void AddColorChangeByName(string name, ColorChange colorChange)
@@ -33,8 +33,8 @@ Same as above except that it uses the component name instead of a type to apply 
 
 ```c#
 // The colony toolbar button now has a black background and white text.
-var colorChange = new ColorChange { BackgroundColor = Color.Black, ForegroundColor = Color.White };
-ThemeCreator.AddColorChangeByName("cmdToolbarColony", colorChange);
+var colorChange = new ThemeCreator.ColorChange { BackgroundColor = Color.Black, ForegroundColor = Color.White };
+ThemeCreator.ThemeCreator.AddColorChangeByName("cmdToolbarColony", colorChange);
 ```
 
 ### public static void AddColorChangeByNameRegex(string name, ColorChange colorChange)
@@ -43,8 +43,8 @@ Applies a color change if the control name matches the regex provided.
 
 ```c#
 // All toolbar buttons now have a black background and white text.
-var colorChange = new ColorChange { BackgroundColor = Color.Black, ForegroundColor = Color.White };
-ThemeCreator.AddColorChangeByNameRegex(new Regex("cmdToolbar"), colorChange);
+var colorChange = new Themecreator.ColorChange { BackgroundColor = Color.Black, ForegroundColor = Color.White };
+ThemeCreator.ThemeCreator.AddColorChangeByNameRegex(new Regex("cmdToolbar"), colorChange);
 ```
 
 ## Example
