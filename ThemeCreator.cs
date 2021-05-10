@@ -59,21 +59,21 @@ namespace ThemeCreator
         }
 
         /// <summary>
-        /// Our harmony form constructor postfix method which simply adds our custom shown callback.
+        /// Our harmony form constructor postfix method which simply adds our custom load callback.
         /// </summary>
         /// <param name="__instance"></param>
         private static void FormConstructorPostfix(Form __instance)
         {
-            __instance.Shown += CustomShown;
+            __instance.HandleCreated += CustomHandleCreated;
         }
 
         /// <summary>
-        /// Our custom shown callback is a pass-through method that simply casts our generic callback
+        /// Our custom handle created callback is a pass-through method that simply casts our generic callback
         /// object to a Control and sends it off to the IterateControls method for enumeration/modification.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private static void CustomShown(Object sender, EventArgs e)
+        private static void CustomHandleCreated(Object sender, EventArgs e)
         {
             IterateControls((Control)sender);
         }

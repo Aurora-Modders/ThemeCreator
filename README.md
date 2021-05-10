@@ -84,12 +84,6 @@ namespace ExampleTheme
 }
 ```
 
-## Notes
-
-The theme gets applied during the Form.OnShown event.
-
-This means there will be a slight delay between the time a user opens the form initially, and when the color changes actually get applied (a couple seconds on my machine).
-
 ## TODO
 
 - Add methods to tweak fonts
