@@ -25,6 +25,7 @@ namespace ThemeCreator
     {
         public override string Description => "A helper patch to create theme patches";
 
+        // -- Colors --
         // Global Color Swaps - swap any original Aurora color with another from any control.
         private static Dictionary<Color, Color> GlobalColorSwaps = new Dictionary<Color, Color>();
         // Color changes by Type - Set any Type's background and foreground colors.
@@ -33,6 +34,15 @@ namespace ThemeCreator
         private static Dictionary<string, ColorChange> NameColorChanges = new Dictionary<string, ColorChange>();
         // Color changes by a regex match of named controls - last resort, not very performant.
         private static Dictionary<Regex, ColorChange> RegexNameColorChanges = new Dictionary<Regex, ColorChange>();
+        // -- Fonts --
+        // Global Font - the default global font.
+        private static Font GlobalFont = null;
+        // Font changes by Type - Set any Type's font.
+        private static Dictionary<Type, Font> TypeFontChanges = new Dictionary<Type, Font>();
+        // Named control font changes.
+        private static Dictionary<string, Font> NameFontChanges = new Dictionary<string, Font>();
+        // Font changes by a regex match of named controls - last resort, not very performant.
+        private static Dictionary<Regex, Font> RegexNameFontChanges = new Dictionary<Regex, Font>();
 
         /// <summary>
         /// Initialize our ThemeCreator by patching all Form constructors so that we can inject our colors changes.
@@ -75,6 +85,11 @@ namespace ThemeCreator
         /// <param name="e"></param>
         private static void CustomHandleCreated(Object sender, EventArgs e)
         {
+            Control ctrl = sender as Control;
+            if (GlobalFont != null)
+            {
+                ctrl.Font = GlobalFont;
+            }
             IterateControls((Control)sender);
         }
 
@@ -97,6 +112,7 @@ namespace ThemeCreator
         /// <param name="control"></param>
         private static void ApplyChanges(Control control)
         {
+            // -- Colors -- //
             // Global color swaps.
             if (GlobalColorSwaps.ContainsKey(control.BackColor)) control.BackColor = GlobalColorSwaps[control.BackColor];
             if (GlobalColorSwaps.ContainsKey(control.ForeColor)) control.ForeColor = GlobalColorSwaps[control.ForeColor];
@@ -108,13 +124,6 @@ namespace ThemeCreator
                 if (colorChange.BackgroundColor.HasValue) control.BackColor = colorChange.BackgroundColor.Value;
                 if (colorChange.ForegroundColor.HasValue) control.ForeColor = colorChange.ForegroundColor.Value;
             }
-            // Named color changes.
-            if (NameColorChanges.ContainsKey(control.Name))
-            {
-                var colorChange = NameColorChanges[control.Name];
-                if (colorChange.BackgroundColor.HasValue) control.BackColor = colorChange.BackgroundColor.Value;
-                if (colorChange.ForegroundColor.HasValue) control.ForeColor = colorChange.ForegroundColor.Value;
-            }
             // Regex named colors changes.
             foreach (KeyValuePair<Regex, ColorChange> regexColor in RegexNameColorChanges)
             {
@@ -123,6 +132,33 @@ namespace ThemeCreator
                     if (regexColor.Value.BackgroundColor.HasValue) control.BackColor = regexColor.Value.BackgroundColor.Value;
                     if (regexColor.Value.ForegroundColor.HasValue) control.ForeColor = regexColor.Value.ForegroundColor.Value;
                 }
+            }
+            // Named color changes.
+            if (NameColorChanges.ContainsKey(control.Name))
+            {
+                var colorChange = NameColorChanges[control.Name];
+                if (colorChange.BackgroundColor.HasValue) control.BackColor = colorChange.BackgroundColor.Value;
+                if (colorChange.ForegroundColor.HasValue) control.ForeColor = colorChange.ForegroundColor.Value;
+            }
+
+            // -- Fonts -- //
+            // Type font changes.
+            if (TypeFontChanges.ContainsKey(type))
+            {
+                control.Font = TypeFontChanges[type];
+            }
+            // Regex named font changes.
+            foreach (KeyValuePair<Regex, Font> regexFont in RegexNameFontChanges)
+            {
+                if (regexFont.Key.IsMatch(control.Name))
+                {
+                    control.Font = regexFont.Value;
+                }
+            }
+            // Named font changes.
+            if (NameFontChanges.ContainsKey(control.Name))
+            {
+                control.Font = NameFontChanges[control.Name];
             }
         }
 
@@ -165,6 +201,46 @@ namespace ThemeCreator
         public static void AddColorChangeByNameRegex(Regex regex, ColorChange colorChange)
         {
             RegexNameColorChanges[regex] = colorChange;
+        }
+
+        /// <summary>
+        /// Sets a default global font.
+        /// </summary>
+        /// <param name="font"></param>
+        public static void SetGlobalFont(Font font)
+        {
+            GlobalFont = font;
+        }
+
+        /// <summary>
+        /// Will apply the font specified to the type specified.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="font"></param>
+        public static void AddFontChangeByType(Type type, Font font)
+        {
+            TypeFontChanges[type] = font;
+        }
+
+        /// <summary>
+        /// Will apply the font specified to the control name specified.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="font"></param>
+        public static void AddFontChangeByName(string name, Font font)
+        {
+            NameFontChanges[name] = font;
+        }
+
+        /// <summary>
+        /// Will apply the font changes specified to the control name matching the regex specified.
+        /// Should be used as a last resort - not very performant.
+        /// </summary>
+        /// <param name="regex"></param>
+        /// <param name="font"></param>
+        public static void AddFontChangeByNameRegex(Regex regex, Font font)
+        {
+            RegexNameFontChanges[regex] = font;
         }
     }
 }

@@ -47,6 +47,42 @@ var colorChange = new Themecreator.ColorChange { BackgroundColor = Color.Black, 
 ThemeCreator.ThemeCreator.AddColorChangeByNameRegex(new Regex("cmdToolbar"), colorChange);
 ```
 
+### public static void SetGlobalFont(Font font)
+
+A method used to override the global font across Aurora.
+
+```c#
+ThemeCreator.ThemeCreator.SetGlobalFont(new Font(FontFamily.GenericSansSerif, 12f));
+```
+
+### public static void AddFontChangeByType(Type type, Font font)
+
+A method used to apply font changes based on form types.
+Useful to modify all Form/ListView/Button/etc fonts.
+
+```c#
+// All ListView controls now have a tiny monospace font.
+ThemeCreator.ThemeCreator.AddFontChangeByType(typeof(ListView), new Font(FontFamily.GenericMonospace, 7f));
+```
+
+### public static void AddFontChangeByName(string name, Font font)
+
+Same as above except that it uses the component name instead of a type to apply font changes.
+
+```c#
+// The increment 30 days button button now has a large font size.
+ThemeCreator.ThemeCreator.AddFontChangeByName("cmdIncrement30D", new Font(FontFamily.GenericSans, 20f));
+```
+
+### public static void AddFontChangeByNameRegex(string name, Font font)
+
+Applies a font change if the control name matches the regex provided.
+
+```c#
+// All toolbar buttons now have a tiny font size.
+ThemeCreator.ThemeCreator.AddFontChangeByNameRegex(new Regex("cmdIncrement"), new Font(FontFamily.GenericMonospace, 7f));
+```
+
 ## Full Theme Patch Example
 
 Working example of a particularly bad theme.
@@ -68,6 +104,9 @@ namespace ExampleTheme
 
         protected override void Loaded(Harmony harmony)
         {
+            // Larger global font size.
+            ThemeCreator.ThemeCreator.SetGlobalFont(new Font(FontFamily.GenericSansSerif, 12f));
+
             // Black background.
             ThemeCreator.ThemeCreator.AddGlobalColorSwap(Color.FromArgb(0, 0, 64), Color.Black);
 
@@ -86,5 +125,4 @@ namespace ExampleTheme
 
 ## TODO
 
-- Add methods to tweak fonts
 - Add methods to tweak non-control colors, such as map components (like planets, orbits, etc).
