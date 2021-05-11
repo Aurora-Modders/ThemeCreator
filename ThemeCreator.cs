@@ -25,24 +25,9 @@ namespace ThemeCreator
     {
         public override string Description => "A helper patch to create theme patches";
 
-        // -- Colors --
-        // Global Color Swaps - swap any original Aurora color with another from any control.
-        private static Dictionary<Color, Color> GlobalColorSwaps = new Dictionary<Color, Color>();
-        // Color changes by Type - Set any Type's background and foreground colors.
-        private static Dictionary<Type, ColorChange> TypeColorChanges = new Dictionary<Type, ColorChange>();
-        // Named control color changes.
-        private static Dictionary<string, ColorChange> NameColorChanges = new Dictionary<string, ColorChange>();
-        // Color changes by a regex match of named controls - last resort, not very performant.
-        private static Dictionary<Regex, ColorChange> RegexNameColorChanges = new Dictionary<Regex, ColorChange>();
-        // -- Fonts --
-        // Global Font - the default global font.
+        private static Dictionary<Func<Control, bool>, ColorChange> ColorPredicates = new Dictionary<Func<Control, bool>, ColorChange>();
+        private static Dictionary<Func<Control, bool>, Font> FontPredicates = new Dictionary<Func<Control, bool>, Font>();
         private static Font GlobalFont = null;
-        // Font changes by Type - Set any Type's font.
-        private static Dictionary<Type, Font> TypeFontChanges = new Dictionary<Type, Font>();
-        // Named control font changes.
-        private static Dictionary<string, Font> NameFontChanges = new Dictionary<string, Font>();
-        // Font changes by a regex match of named controls - last resort, not very performant.
-        private static Dictionary<Regex, Font> RegexNameFontChanges = new Dictionary<Regex, Font>();
 
         /// <summary>
         /// Initialize our ThemeCreator by patching all Form constructors so that we can inject our colors changes.
@@ -85,11 +70,7 @@ namespace ThemeCreator
         /// <param name="e"></param>
         private static void CustomHandleCreated(Object sender, EventArgs e)
         {
-            Control ctrl = sender as Control;
-            if (GlobalFont != null)
-            {
-                ctrl.Font = GlobalFont;
-            }
+            if (GlobalFont != null) ((Control)sender).Font = GlobalFont;
             IterateControls((Control)sender);
         }
 
@@ -113,63 +94,33 @@ namespace ThemeCreator
         private static void ApplyChanges(Control control)
         {
             // -- Colors -- //
-            // Global color swaps.
-            if (GlobalColorSwaps.ContainsKey(control.BackColor)) control.BackColor = GlobalColorSwaps[control.BackColor];
-            if (GlobalColorSwaps.ContainsKey(control.ForeColor)) control.ForeColor = GlobalColorSwaps[control.ForeColor];
-            // Type color changes.
-            Type type = control.GetType();
-            if (TypeColorChanges.ContainsKey(type))
+            foreach (KeyValuePair<Func<Control, bool>, ColorChange> predicate in ColorPredicates)
             {
-                var colorChange = TypeColorChanges[type];
-                if (colorChange.BackgroundColor.HasValue) control.BackColor = colorChange.BackgroundColor.Value;
-                if (colorChange.ForegroundColor.HasValue) control.ForeColor = colorChange.ForegroundColor.Value;
-            }
-            // Regex named colors changes.
-            foreach (KeyValuePair<Regex, ColorChange> regexColor in RegexNameColorChanges)
-            {
-                if (regexColor.Key.IsMatch(control.Name))
+                if (predicate.Key.Invoke(control))
                 {
-                    if (regexColor.Value.BackgroundColor.HasValue) control.BackColor = regexColor.Value.BackgroundColor.Value;
-                    if (regexColor.Value.ForegroundColor.HasValue) control.ForeColor = regexColor.Value.ForegroundColor.Value;
+                    if (predicate.Value.BackgroundColor.HasValue) control.BackColor = predicate.Value.BackgroundColor.Value;
+                    if (predicate.Value.ForegroundColor.HasValue) control.ForeColor = predicate.Value.ForegroundColor.Value;
                 }
             }
-            // Named color changes.
-            if (NameColorChanges.ContainsKey(control.Name))
-            {
-                var colorChange = NameColorChanges[control.Name];
-                if (colorChange.BackgroundColor.HasValue) control.BackColor = colorChange.BackgroundColor.Value;
-                if (colorChange.ForegroundColor.HasValue) control.ForeColor = colorChange.ForegroundColor.Value;
-            }
-
             // -- Fonts -- //
-            // Type font changes.
-            if (TypeFontChanges.ContainsKey(type))
+            foreach (KeyValuePair<Func<Control, bool>, Font> predicate in FontPredicates)
             {
-                control.Font = TypeFontChanges[type];
-            }
-            // Regex named font changes.
-            foreach (KeyValuePair<Regex, Font> regexFont in RegexNameFontChanges)
-            {
-                if (regexFont.Key.IsMatch(control.Name))
+                if (predicate.Key.Invoke(control))
                 {
-                    control.Font = regexFont.Value;
+                    control.Font = predicate.Value;
                 }
-            }
-            // Named font changes.
-            if (NameFontChanges.ContainsKey(control.Name))
-            {
-                control.Font = NameFontChanges[control.Name];
             }
         }
 
         /// <summary>
-        /// Convert every instance of an original Aurora color into another color.
+        /// Convert every instance of a color into another color.
         /// </summary>
         /// <param name="current"></param>
         /// <param name="swap"></param>
-        public static void AddGlobalColorSwap(Color current, Color swap)
+        public static void AddColorChange(Color current, Color swap)
         {
-            GlobalColorSwaps[current] = swap;
+            ColorPredicates.Add(control => control.BackColor == current, new ColorChange { BackgroundColor = swap });
+            ColorPredicates.Add(control => control.ForeColor == current, new ColorChange { ForegroundColor = swap });
         }
 
         /// <summary>
@@ -177,9 +128,9 @@ namespace ThemeCreator
         /// </summary>
         /// <param name="type"></param>
         /// <param name="colorChange"></param>
-        public static void AddColorChangeByType(Type type, ColorChange colorChange)
+        public static void AddColorChange(Type type, ColorChange colorChange)
         {
-            TypeColorChanges[type] = colorChange;
+            ColorPredicates.Add(control => control.GetType() == type, colorChange);
         }
 
         /// <summary>
@@ -187,9 +138,9 @@ namespace ThemeCreator
         /// </summary>
         /// <param name="name"></param>
         /// <param name="colorChange"></param>
-        public static void AddColorChangeByName(string name, ColorChange colorChange)
+        public static void AddColorChange(string name, ColorChange colorChange)
         {
-            NameColorChanges[name] = colorChange;
+            ColorPredicates.Add(control => control.Name == name, colorChange);
         }
 
         /// <summary>
@@ -198,16 +149,26 @@ namespace ThemeCreator
         /// </summary>
         /// <param name="regex"></param>
         /// <param name="colorChange"></param>
-        public static void AddColorChangeByNameRegex(Regex regex, ColorChange colorChange)
+        public static void AddColorChange(Regex regex, ColorChange colorChange)
         {
-            RegexNameColorChanges[regex] = colorChange;
+            ColorPredicates.Add(control => regex.IsMatch(control.Name), colorChange);
+        }
+
+        /// <summary>
+        /// Apply the color change specified if the predicate returns true.
+        /// </summary>
+        /// <param name="predicate"></param>
+        /// <param name="colorChange"></param>
+        public static void AddColorChange(Func<Control, bool> predicate, ColorChange colorChange)
+        {
+            ColorPredicates.Add(predicate, colorChange);
         }
 
         /// <summary>
         /// Sets a default global font.
         /// </summary>
         /// <param name="font"></param>
-        public static void SetGlobalFont(Font font)
+        public static void AddFontChange(Font font)
         {
             GlobalFont = font;
         }
@@ -217,9 +178,9 @@ namespace ThemeCreator
         /// </summary>
         /// <param name="type"></param>
         /// <param name="font"></param>
-        public static void AddFontChangeByType(Type type, Font font)
+        public static void AddFontChange(Type type, Font font)
         {
-            TypeFontChanges[type] = font;
+            FontPredicates.Add(control => control.GetType() == type, font);
         }
 
         /// <summary>
@@ -227,9 +188,9 @@ namespace ThemeCreator
         /// </summary>
         /// <param name="name"></param>
         /// <param name="font"></param>
-        public static void AddFontChangeByName(string name, Font font)
+        public static void AddFontChange(string name, Font font)
         {
-            NameFontChanges[name] = font;
+            FontPredicates.Add(control => control.Name == name, font);
         }
 
         /// <summary>
@@ -238,9 +199,19 @@ namespace ThemeCreator
         /// </summary>
         /// <param name="regex"></param>
         /// <param name="font"></param>
-        public static void AddFontChangeByNameRegex(Regex regex, Font font)
+        public static void AddFontChange(Regex regex, Font font)
         {
-            RegexNameFontChanges[regex] = font;
+            FontPredicates.Add(control => regex.IsMatch(control.Name), font);
+        }
+
+        /// <summary>
+        /// Apply the font specified if the predicate returns true.
+        /// </summary>
+        /// <param name="predicate"></param>
+        /// <param name="font"></param>
+        public static void AddFontChange(Func<Control, bool> predicate, Font font)
+        {
+            FontPredicates.Add(predicate, font);
         }
     }
 }
