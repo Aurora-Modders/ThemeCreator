@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 using HarmonyLib;
+using Lib;
 
 namespace ThemeCreator
 {
@@ -24,9 +25,12 @@ namespace ThemeCreator
     public class ThemeCreator : AuroraPatch.Patch
     {
         public override string Description => "A helper patch to create theme patches";
+        public override IEnumerable<string> Dependencies => new[] { "Lib" };
+        private static Lib.Lib lib;
 
         private static Dictionary<Func<Control, bool>, ColorChange> ColorPredicates = new Dictionary<Func<Control, bool>, ColorChange>();
         private static Dictionary<Func<Control, bool>, Font> FontPredicates = new Dictionary<Func<Control, bool>, Font>();
+        private static Dictionary<Func<Control, bool>, Image> ImagePredicates = new Dictionary<Func<Control, bool>, Image>();
         private static Font GlobalFont = null;
         private static List<Action<Graphics, Pen>> GraphicsDrawEllipseActions = new List<Action<Graphics, Pen>>();
         private static List<Action<Graphics, Brush>> GraphicsFillEllipseActions = new List<Action<Graphics, Brush>>();
@@ -43,6 +47,7 @@ namespace ThemeCreator
         protected override void Loaded(Harmony harmony)
         {
             LogInfo("Loading ThemeCreator...");
+            lib = GetDependency<Lib.Lib>("Lib");
             HarmonyMethod formConstructorPostfixMethod = new HarmonyMethod(GetType().GetMethod("FormConstructorPostfix", AccessTools.all));
             foreach (var form in AuroraAssembly.GetTypes().Where(t => typeof(Form).IsAssignableFrom(t)))
             {
@@ -256,6 +261,14 @@ namespace ThemeCreator
                     control.Font = predicate.Value;
                 }
             }
+            // -- Images -- //
+            foreach (KeyValuePair<Func<Control, bool>, Image> predicate in ImagePredicates)
+            {
+                if (predicate.Key.Invoke(control))
+                {
+                    control.BackgroundImage = predicate.Value;
+                }
+            }
         }
 
         /// <summary>
@@ -358,6 +371,34 @@ namespace ThemeCreator
         public static void AddFontChange(Func<Control, bool> predicate, Font font)
         {
             FontPredicates.Add(predicate, font);
+        }
+
+        /// <summary>
+        /// Set the image specified as the background if the predicate returns true.
+        /// </summary>
+        /// <param name="predicate"></param>
+        /// <param name="image"></param>
+        public static void AddImageChange(Func<Control, bool> predicate, Image image)
+        {
+            ImagePredicates.Add(predicate, image);
+        }
+
+        /// <summary>
+        /// Helper method to set a background image for a specific AuroraButton.
+        /// </summary>
+        /// <param name="auroraButton"></param>
+        public static void AddImageChange(AuroraButton auroraButton, Image image)
+        {
+            ImagePredicates.Add(control => control.Name == lib.KnowledgeBase.GetButtonName(auroraButton), image);
+        }
+
+        /// <summary>
+        /// Helper method to set a background image for a specific AuroraButton.
+        /// </summary>
+        /// <param name="auroraButton"></param>
+        public static void AddImageChange(AuroraButton auroraButton, string imagePath)
+        {
+            AddImageChange(auroraButton, Image.FromFile(imagePath));
         }
 
         /// <summary>

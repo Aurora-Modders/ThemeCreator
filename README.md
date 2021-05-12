@@ -18,6 +18,9 @@ AddFontChange(Type type, Font font)
 AddFontChange(string name, Font font)
 AddFontChange(Regex regex, Font font)
 AddFontChange(Func<Control, bool> predicate, Font font)
+AddImageChange(Func<Control, bool> predicate, Image image)
+AddImageChange(AuroraButton auroraButton, Image image)
+AddImageChange(AuroraButton auroraButton, string imagePath)
 DrawEllipsePrefixAction(Action<Graphics, Pen> action)
 FillEllipsePrefixAction(Action<Graphics, Brush> action)
 SetOrbitColor(Color color)
@@ -39,3 +42,13 @@ ApplyPen(Action<Pen> action)
 ## Example
 
 See the [T2DTheme](https://github.com/Aurora-Modders/T2DTheme) for example usage.
+
+## Developers
+
+In order to build this library, you will need to update the project references so the dependencies can be found.
+
+0Harmony should be pulled from NuGet automatically.
+
+AuroraPatch.exe and Lib.dll will need to be referenced.
+
+If creating your own theme, you'll need to reference this project's DLL to your new theme project.
