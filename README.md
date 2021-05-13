@@ -33,10 +33,6 @@ DrawLinePrefixAction(Action<Graphics, Pen> action)
 SetDistanceRulerLineColor(Color color)
 SetCometTailColor(Color color)
 SetMapTextColor(Color color)
-ApplySolidBrush(Color current, Color swap)
-ApplySolidBrush(Action<SolidBrush> action)
-ApplyTextureBrush(Action<TextureBrush> action)
-ApplyPen(Action<Pen> action)
 ```
 
 ## Example
@@ -49,6 +45,6 @@ In order to build this library, you will need to update the project references s
 
 0Harmony should be pulled from NuGet automatically.
 
-AuroraPatch.exe and Lib.dll will need to be referenced.
+AuroraPatch.exe and Lib.dll >= 0.1.1 will need to be referenced.
 
 If creating your own theme, you'll need to reference this project's DLL to your new theme project.

@@ -28,17 +28,18 @@ namespace ThemeCreator
         public override IEnumerable<string> Dependencies => new[] { "Lib" };
         private static Lib.Lib lib;
 
+        // Cache our Graphics object to know if they are inside AuroraCode or not.
+        private static Dictionary<Graphics, bool> AuroraGraphics = new Dictionary<Graphics, bool>();
+        // Global font settings.
+        private static Font GlobalFont = null;
+        // Our Func predicates and Actions.
         private static Dictionary<Func<Control, bool>, ColorChange> ColorPredicates = new Dictionary<Func<Control, bool>, ColorChange>();
         private static Dictionary<Func<Control, bool>, Font> FontPredicates = new Dictionary<Func<Control, bool>, Font>();
         private static Dictionary<Func<Control, bool>, Image> ImagePredicates = new Dictionary<Func<Control, bool>, Image>();
-        private static Font GlobalFont = null;
         private static List<Action<Graphics, Pen>> GraphicsDrawEllipseActions = new List<Action<Graphics, Pen>>();
         private static List<Action<Graphics, Brush>> GraphicsFillEllipseActions = new List<Action<Graphics, Brush>>();
         private static List<Action<Graphics, string, Font, Brush>> GraphicsDrawStringActions = new List<Action<Graphics, string, Font, Brush>>();
         private static List<Action<Graphics, Pen>> GraphicsDrawLineActions = new List<Action<Graphics, Pen>>();
-        private static List<Action<SolidBrush>> SolidBrushActions = new List<Action<SolidBrush>>();
-        private static List<Action<TextureBrush>> TextureBrushActions = new List<Action<TextureBrush>>();
-        private static List<Action<Pen>> PenActions = new List<Action<Pen>>();
 
         /// <summary>
         /// Initialize our ThemeCreator by patching all Form constructors so that we can inject our colors changes.
@@ -84,36 +85,6 @@ namespace ThemeCreator
                     LogError($"ThemeCreator failed to patch graphics draw/fill ellipse methods for {graphics.Name}, exception: {e}");
                 }
             }
-            HarmonyMethod brushPostfixMethod = new HarmonyMethod(GetType().GetMethod("BrushConstructorPostfix", AccessTools.all));
-            foreach (var brush in typeof(Brush).Assembly.GetTypes().Where(t => typeof(Brush).IsAssignableFrom(t)))
-            {
-                try
-                {
-                    foreach (var ctor in brush.GetConstructors())
-                    {
-                        harmony.Patch(ctor, postfix: brushPostfixMethod);
-                    }
-                }
-                catch (Exception e)
-                {
-                    LogError($"ThemeCreator failed to patch brush constructor {brush}, exception: {e}");
-                }
-            }
-            HarmonyMethod penPostfixMethod = new HarmonyMethod(GetType().GetMethod("PenConstructorPostfix", AccessTools.all));
-            foreach (var pen in typeof(Pen).Assembly.GetTypes().Where(t => typeof(Pen).IsAssignableFrom(t)))
-            {
-                try
-                {
-                    foreach (var ctor in pen.GetConstructors())
-                    {
-                        harmony.Patch(ctor, postfix: penPostfixMethod);
-                    }
-                }
-                catch (Exception e)
-                {
-                    LogError($"ThemeCreator failed to patch Pen constructor {pen.Name}, exception: {e}");
-                }
-            }
         }
 
         /// <summary>
@@ -126,15 +97,36 @@ namespace ThemeCreator
         }
 
         /// <summary>
+        /// Helper method to check if we're currently inside AuroraCode.
+        /// Used to ensure we don't hook into AuroraPatch/Patch code.
+        /// </summary>
+        /// <param name="graphics"></param>
+        /// <returns></returns>
+        private static bool InAuroraCode(Graphics graphics)
+        {
+            bool inAuroraCode;
+            bool result = AuroraGraphics.TryGetValue(graphics, out inAuroraCode);
+            if (!result)
+            {
+                inAuroraCode = Lib.Lib.IsAuroraCode();
+                AuroraGraphics[graphics] = inAuroraCode;
+            }
+            return inAuroraCode;
+        }
+
+        /// <summary>
         /// Our harmony Graphics DrawEllipse prefix that invokes the necessary actions.
         /// </summary>
         /// <param name="__instance"></param>
         /// <param name="pen"></param>
         private static void GraphicsDrawEllipsePrefix(Graphics __instance, Pen pen)
         {
-            foreach (Action<Graphics, Pen> action in GraphicsDrawEllipseActions)
+            if (InAuroraCode(__instance))
             {
-                action.Invoke(__instance, pen);
+                foreach (Action<Graphics, Pen> action in GraphicsDrawEllipseActions)
+                {
+                    action.Invoke(__instance, pen);
+                }
             }
         }
 
@@ -145,9 +137,12 @@ namespace ThemeCreator
         /// <param name="brush"></param>
         private static void GraphicsFillEllipsePrefix(Graphics __instance, Brush brush)
         {
-            foreach (Action<Graphics, Brush> action in GraphicsFillEllipseActions)
+            if (InAuroraCode(__instance))
             {
-                action.Invoke(__instance, brush);
+                foreach (Action<Graphics, Brush> action in GraphicsFillEllipseActions)
+                {
+                    action.Invoke(__instance, brush);
+                }
             }
         }
 
@@ -160,9 +155,12 @@ namespace ThemeCreator
         /// <param name="brush"></param>
         private static void GraphicsDrawStringPrefix(Graphics __instance, string s, Font font, Brush brush)
         {
-            foreach (Action<Graphics, string, Font, Brush> action in GraphicsDrawStringActions)
+            if (InAuroraCode(__instance))
             {
-                action.Invoke(__instance, s, font, brush);
+                foreach (Action<Graphics, string, Font, Brush> action in GraphicsDrawStringActions)
+                {
+                    action.Invoke(__instance, s, font, brush);
+                }
             }
         }
 
@@ -173,43 +171,12 @@ namespace ThemeCreator
         /// <param name="pen"></param>
         private static void GraphicsDrawLinePrefix(Graphics __instance, Pen pen)
         {
-            foreach (Action<Graphics, Pen> action in GraphicsDrawLineActions)
+            if (InAuroraCode(__instance))
             {
-                action.Invoke(__instance, pen);
-            }
-        }
-
-        /// <summary>
-        /// Our harmony brush constructor postfix method which invokes our solid brush actions.
-        /// </summary>
-        /// <param name="__instance"></param>
-        private static void BrushConstructorPostfix(Brush __instance)
-        {
-            if (__instance.GetType() == typeof(SolidBrush))
-            {
-                foreach (Action<SolidBrush> action in SolidBrushActions)
+                foreach (Action<Graphics, Pen> action in GraphicsDrawLineActions)
                 {
-                    action.Invoke(__instance as SolidBrush);
+                    action.Invoke(__instance, pen);
                 }
-            }
-            else if (__instance.GetType() == typeof(TextureBrush))
-            {
-                foreach (Action<TextureBrush> action in TextureBrushActions)
-                {
-                    action.Invoke(__instance as TextureBrush);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Our harmony pen constructor postfix method which invokes our solid brush actions.
-        /// </summary>
-        /// <param name="__instance"></param>
-        private static void PenConstructorPostfix(Pen __instance)
-        {
-            foreach (Action<Pen> action in PenActions)
-            {
-                action.Invoke(__instance);
             }
         }
 
@@ -572,48 +539,6 @@ namespace ThemeCreator
                     ((SolidBrush)brush).Color = color;
                 }
             });
-        }
-
-        /// <summary>
-        /// Will swap a solid brush color upon creation.
-        /// </summary>
-        /// <param name="action"></param>
-        public static void ApplySolidBrush(Color current, Color swap)
-        {
-            SolidBrushActions.Add(solidBrush =>
-            {
-                if (solidBrush.Color == current)
-                {
-                    solidBrush.Color = swap;
-                }
-            });
-        }
-
-        /// <summary>
-        /// Allows for performing action upon solid brush creation.
-        /// </summary>
-        /// <param name="action"></param>
-        public static void ApplySolidBrush(Action<SolidBrush> action)
-        {
-            SolidBrushActions.Add(action);
-        }
-
-        /// <summary>
-        /// Allows for performing action upon texture brush creation.
-        /// </summary>
-        /// <param name="action"></param>
-        public static void ApplyTextureBrush(Action<TextureBrush> action)
-        {
-            TextureBrushActions.Add(action);
-        }
-
-        /// <summary>
-        /// Allows for performing action upon pen creation.
-        /// </summary>
-        /// <param name="action"></param>
-        public static void ApplyPen(Action<Pen> action)
-        {
-            PenActions.Add(action);
         }
     }
 }
