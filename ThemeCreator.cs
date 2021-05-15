@@ -48,7 +48,6 @@ namespace ThemeCreator
         protected override void Loaded(Harmony harmony)
         {
             LogInfo("Loading ThemeCreator...");
-            lib = GetDependency<Lib.Lib>("Lib");
             HarmonyMethod formConstructorPostfixMethod = new HarmonyMethod(GetType().GetMethod("FormConstructorPostfix", AccessTools.all));
             foreach (var form in AuroraAssembly.GetTypes().Where(t => typeof(Form).IsAssignableFrom(t)))
             {
@@ -85,6 +84,10 @@ namespace ThemeCreator
                     LogError($"ThemeCreator failed to patch graphics draw/fill ellipse methods for {graphics.Name}, exception: {e}");
                 }
             }
+            // Need a work-around for the toolbar buttons resetting colors every time increment.
+            lib = GetDependency<Lib.Lib>("Lib");
+            lib.RegisterEventHandler(AuroraType.TacticalMapForm, "Click", GetType().GetMethod("CustomButtonClickTacticalMap", AccessTools.all), control => typeof(Button).IsAssignableFrom(control.GetType()));
+            lib.RegisterEventHandler(AuroraType.GalacticMapForm, "Click", GetType().GetMethod("CustomButtonClickGalacticMap", AccessTools.all), control => typeof(Button).IsAssignableFrom(control.GetType()));
         }
 
         /// <summary>
@@ -234,6 +237,50 @@ namespace ThemeCreator
                 if (predicate.Key.Invoke(control))
                 {
                     control.BackgroundImage = predicate.Value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Custom button click event to re-apply color changes on TacticalMap time increment event.
+        /// Hacky work-around for the toolbar button colors resetting on every time tick.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private static void CustomButtonClickTacticalMap(object sender, EventArgs e)
+        {
+            List<Button> buttonsToHandle = lib.KnowledgeBase.GetTimeIncrementButtons().ToList();
+            buttonsToHandle.AddRange(lib.KnowledgeBase.GetSubPulseButtons().ToList());
+            foreach (Button button in buttonsToHandle)
+            {
+                foreach (KeyValuePair<Func<Control, bool>, ColorChange> predicate in ColorPredicates)
+                {
+                    if (predicate.Key.Invoke(button))
+                    {
+                        if (predicate.Value.BackgroundColor.HasValue) button.BackColor = predicate.Value.BackgroundColor.Value;
+                        if (predicate.Value.ForegroundColor.HasValue) button.ForeColor = predicate.Value.ForegroundColor.Value;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Custom button click event to re-apply color changes on GalacticMap time increment event.
+        /// Hacky work-around for the toolbar button colors resetting on every time tick.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private static void CustomButtonClickGalacticMap(object sender, EventArgs e)
+        {
+            foreach (Button button in lib.KnowledgeBase.GetTimeIncrementButtonsGalacticMap())
+            {
+                foreach (KeyValuePair<Func<Control, bool>, ColorChange> predicate in ColorPredicates)
+                {
+                    if (predicate.Key.Invoke(button))
+                    {
+                        if (predicate.Value.BackgroundColor.HasValue) button.BackColor = predicate.Value.BackgroundColor.Value;
+                        if (predicate.Value.ForegroundColor.HasValue) button.ForeColor = predicate.Value.ForegroundColor.Value;
+                    }
                 }
             }
         }
